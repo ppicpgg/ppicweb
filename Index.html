@@ -1,0 +1,1419 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Textile Webapp Dashboard</title>
+    <!-- Library Plotly -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        /* === VARIABEL WARNA PINTAR (SMART COLORS) === */
+        :root {
+            --bg-color: #f0f2f5; 
+            --text-color: #333333; 
+            --card-bg: #ffffff;
+            --border-color: #e0e0e0; 
+            --primary-color: #2563eb;
+            --sidebar-bg: #ffffff; 
+            --sidebar-hover: #f3f4f6; 
+            --table-header: #f8fafc;
+            
+            --success-color: #059669; 
+            --warning-color: #d97706; 
+            --danger-color: #dc2626;  
+            --info-color: #0284c7;    
+        }
+        
+        [data-theme="dark"] {
+            --bg-color: #050a15; 
+            --text-color: #e2e8f0; 
+            --card-bg: #0b1120;
+            --border-color: #1e293b; 
+            --primary-color: #00ffff;
+            --sidebar-bg: #0b1120; 
+            --sidebar-hover: #1e293b; 
+            --table-header: #0b1120;
+
+            --success-color: #00ffaa;
+            --warning-color: #ffaa00;
+            --danger-color: #ff0055;
+            --info-color: #00ffff;
+        }
+
+        .text-primary { color: var(--primary-color); }
+        .text-success { color: var(--success-color); }
+        .text-warning { color: var(--warning-color); }
+        .text-danger  { color: var(--danger-color); }
+        .text-info    { color: var(--info-color); }
+
+        .badge-success { background-color: rgba(5, 150, 105, 0.15); color: var(--success-color); }
+        .badge-warning { background-color: rgba(217, 119, 6, 0.15); color: var(--warning-color); }
+        .badge-danger  { background-color: rgba(220, 38, 38, 0.15); color: var(--danger-color); }
+        .badge-info    { background-color: rgba(2, 132, 199, 0.15); color: var(--info-color); }
+
+        [data-theme="dark"] .badge-success { background-color: rgba(0, 255, 170, 0.15); }
+        [data-theme="dark"] .badge-warning { background-color: rgba(255, 170, 0, 0.15); }
+        [data-theme="dark"] .badge-danger  { background-color: rgba(255, 0, 85, 0.15); }
+        [data-theme="dark"] .badge-info    { background-color: rgba(0, 255, 255, 0.15); }
+
+        /* General Layout */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, sans-serif; margin: 0; background-color: var(--bg-color); color: var(--text-color); display: flex; height: 100vh; overflow: hidden; transition: 0.3s; }
+        .sidebar { width: 250px; background-color: var(--sidebar-bg); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 20px 0; overflow-y: auto; z-index: 10;}
+        .sidebar-title { padding: 0 20px 20px 20px; font-size: 1.2rem; font-weight: bold; border-bottom: 1px solid var(--border-color); margin-bottom: 10px; color: var(--primary-color); }
+        .nav-item { padding: 15px 20px; cursor: pointer; font-weight: 500; transition: 0.2s; display: flex; gap: 10px; align-items: center;}
+        .nav-item:hover, .nav-item.active { background-color: var(--sidebar-hover); border-left: 4px solid var(--primary-color); }
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        
+        .top-bar { height: 60px; background-color: var(--card-bg); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; padding: 0 20px; flex-wrap: nowrap; overflow-x: auto; }
+        .theme-toggle { background-color: transparent; color: var(--text-color); border: 1px solid var(--border-color); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; white-space: nowrap;}
+        .content-area { padding: 20px; overflow-y: auto; flex: 1; }
+        .page { display: none; background-color: transparent; border-radius: 8px; }
+        .page.active { display: block; }
+        
+        /* TOGGLE SWITCH CSS */
+        .switch { position: relative; display: inline-block; width: 44px; height: 22px; margin: 0 5px; flex-shrink: 0;}
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border-color); transition: .4s; border-radius: 22px; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.3);}
+        input:checked + .slider { background-color: var(--success-color); }
+        input:checked + .slider:before { transform: translateX(22px); }
+
+        .filter-box { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; background-color: var(--card-bg); padding: 10px 15px; border-radius: 6px; border: 1px solid var(--border-color); flex-wrap: wrap; }
+        .filter-box input, .filter-box select { padding: 6px 10px; border-radius: 4px; border: 1px solid var(--border-color); background-color: var(--bg-color); color: var(--text-color); font-weight: bold; cursor: pointer; font-family: inherit; }
+
+        .btn-action { background-color: var(--primary-color); color: #fff; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.85rem; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: 0.2s; display: flex; align-items: center; gap: 5px; white-space: nowrap;}
+        .btn-action:hover { opacity: 0.8; }
+        .btn-outline { background-color: transparent; border: 1px solid var(--border-color); color: var(--text-color); box-shadow: none; }
+        .btn-outline:hover { background-color: var(--sidebar-hover); }
+
+        /* GRID & CARDS */
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 20px; }
+        .card { background-color: var(--card-bg); padding: 12px 15px; border-radius: 8px; border: 1px solid var(--border-color); border-left: 4px solid var(--theme-color, var(--primary-color)); transition: 0.3s; position: relative; }
+        .card h4 { margin: 0 0 5px 0; opacity: 0.9; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--theme-color, var(--text-color)); }
+        .card p.value { margin: 0; font-size: 1.3rem; font-weight: bold; color: var(--text-color); }
+        
+        [data-theme="dark"] .card { background-color: rgba(10, 15, 30, 0.6); border: 1px solid var(--theme-color, #333); box-shadow: inset 0 0 10px rgba(255,255,255,0.02); }
+        [data-theme="dark"] .card h4 { text-shadow: 0 0 8px var(--theme-color, #0ff); }
+        [data-theme="dark"] .card p.value { color: #fff; text-shadow: 0 0 8px #fff, 0 0 15px var(--theme-color, #0ff); }
+
+        .branch-details { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--border-color); font-size: 0.75rem; }
+        .branch-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+        .branch-row span:first-child { opacity: 0.8; }
+        .branch-row span:last-child { font-weight: 600; color: var(--theme-color, var(--text-color)); }
+        [data-theme="dark"] .branch-row span:last-child { text-shadow: 0 0 5px var(--theme-color, #0ff); }
+
+        .section-title { margin: 10px 0 10px 0; font-size: 1rem; border-bottom: 2px solid var(--border-color); padding-bottom: 5px; display: inline-block; font-weight: 600; }
+        .chart-container { background-color: var(--card-bg); border-radius: 8px; border: 1px solid var(--border-color); padding: 10px; }
+        [data-theme="dark"] .chart-container { border: 1px solid var(--info-color); box-shadow: 0 0 10px rgba(0,255,255,0.1); }
+        
+        table { width: 100%; border-collapse: collapse; font-size: 0.8rem; background-color: var(--card-bg);}
+        th, td { padding: 8px 10px; text-align: left; border: 1px solid var(--border-color); }
+        th { background-color: var(--table-header); font-weight: 600; text-align: center; }
+        td.num { text-align: right; }
+        .row-category { background-color: var(--sidebar-hover); font-weight: bold; color: var(--primary-color); font-size: 0.9rem; }
+        .row-subtotal { background-color: rgba(0,0,0,0.03); font-weight: bold; font-style: italic; }
+        [data-theme="dark"] .row-subtotal { background-color: rgba(255,255,255,0.05); }
+
+        /* KANBAN DYEING */
+        .machine-group { background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; margin-bottom: 25px; }
+        .machine-title { margin: 0 0 10px 0; color: var(--primary-color); border-bottom: 1px dashed var(--border-color); padding-bottom: 10px; font-size: 1.1rem; }
+        .cycle-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(185px, 1fr)); gap: 10px; }
+        
+        .dye-card { background-color: var(--bg-color); padding: 10px; border-radius: 6px; font-size: 0.72rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 4px; border-left: 4px solid var(--theme-color, transparent); }
+        .dye-card-row { display: flex; justify-content: space-between; align-items: flex-start; }
+        .dye-card strong { opacity: 0.7; }
+        .cycle-badge { display: inline-block; padding: 3px 8px; border-radius: 10px; font-size: 0.68rem; font-weight: bold; }
+        
+        .pending-badge { padding: 2px 6px; border-radius: 4px; font-size: 0.65rem; font-weight: bold; border: 1px solid transparent; }
+        .text-truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        [data-theme="dark"] .machine-group { background-color: rgba(10, 15, 30, 0.4); box-shadow: inset 0 0 10px rgba(0,255,255,0.05); }
+        [data-theme="dark"] .dye-card { background-color: rgba(10, 15, 30, 0.8); border: 1px solid var(--theme-color, var(--border-color)); box-shadow: inset 0 0 10px rgba(255,255,255,0.02); }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-title">🧶 Textile Webapp</div>
+        <div class="nav-item active" onclick="switchPage('pageDashboardStock', this)"><span>📊</span> Dashboard Stock</div>
+        <div class="nav-item" onclick="switchPage('pageDetailStock', this)"><span>📋</span> Detail Stock</div>
+        
+        <div style="margin: 15px 0 5px 20px; font-size: 0.75rem; opacity: 0.6; font-weight: bold; letter-spacing: 1px;">PRODUKSI DYEING</div>
+        <div class="nav-item" onclick="switchPage('pageDashboardDyeing', this)"><span>📈</span> Dashboard Dyeing</div>
+        <div class="nav-item" onclick="switchPage('pageKanbanDyeing', this)"><span>🎨</span> Kanban Order</div>
+        <div class="nav-item" onclick="switchPage('pageResumeDyeing', this)"><span>📅</span> Resume Order</div>
+
+        <!-- MENU PRODUKSI -->
+        <div style="margin: 15px 0 5px 20px; font-size: 0.75rem; opacity: 0.6; font-weight: bold; letter-spacing: 1px;">PRODUKSI UMUM</div>
+        <div class="nav-item" onclick="switchPage('pageDashboardProduksi', this)"><span>🏭</span> Dashboard Produksi</div>
+        <div class="nav-item" onclick="switchPage('pageDetailVariant', this)"><span>🧵</span> Detail per Variant</div>
+        <div class="nav-item" onclick="switchPage('pageDetailBrand', this)"><span>🏷️</span> Detail per Brand</div>
+    </div>
+
+    <div class="main-content">
+        <!-- TOP BAR DENGAN KONTROL AUTO-UPDATE -->
+        <div class="top-bar">
+            <h3 id="pageTitle" style="margin:0; min-width: 150px;">Dashboard Stock</h3>
+            
+            <div style="display: flex; align-items: center; gap: 15px; font-size: 0.85rem; margin-left: auto;">
+                <span id="lastUpdateText" style="opacity: 0.7; display: none;">Tarik Data...</span>
+                
+                <div style="display: flex; align-items: center; background-color: var(--sidebar-hover); padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border-color);">
+                    <span style="font-weight: 600;">Auto Update</span>
+                    <label class="switch">
+                        <input type="checkbox" id="autoUpdateToggle" onchange="toggleAutoUpdate()" checked>
+                        <span class="slider"></span>
+                    </label>
+                    <span id="autoUpdateStatus" class="text-success" style="font-weight: bold; width: 55px;">(1 Jam)</span>
+                </div>
+
+                <button class="btn-action btn-outline" onclick="forceUpdateAll()" title="Tarik semua data terbaru sekarang">
+                    🔄 Update Semua
+                </button>
+                
+                <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">☀️ Light Mode</button>
+            </div>
+        </div>
+
+        <div class="content-area">
+            
+            <div class="filter-box" id="globalStockFilter">
+                <strong>Pilih Tanggal:</strong>
+                <input type="date" id="dateFilterStock" onchange="loadStockData()">
+                <button class="btn-action btn-outline" onclick="loadStockData()" title="Refresh Data Stock">🔄 Refresh Tab</button>
+                <span id="loadingIndicatorStock" style="display:none; color: var(--primary-color); margin-left:10px; font-size: 0.85rem;">⏳ Memperbarui Data...</span>
+                
+                <button id="btnToggleDetail" class="btn-action" onclick="toggleDetailFilters()" style="margin-left:auto;">🔍 Lihat Detail</button>
+            </div>
+
+            <div class="filter-box" id="detailFilters" style="display:none; background-color: rgba(37, 99, 235, 0.05); border-top: 3px solid var(--primary-color);">
+                <select id="filterKategori" onchange="applyStockFilters()"><option value="">Semua Kategori</option></select>
+                <select id="filterNoBenang" onchange="applyStockFilters()"><option value="">Semua No Benang</option></select>
+                <select id="filterStatus" onchange="applyStockFilters()"><option value="">Semua Status</option></select>
+                <select id="filterCabang" onchange="applyStockFilters()"><option value="">Semua Cabang</option></select>
+            </div>
+
+            <div class="filter-box" id="filterDashboardDyeing" style="display:none;">
+                <strong>Mode Tampilan:</strong>
+                <select id="dygFilterType" onchange="toggleDashboardFilter()">
+                    <option value="HARIAN">Harian</option>
+                    <option value="MINGGUAN">Mingguan</option>
+                    <option value="BULANAN">Bulanan</option>
+                    <option value="TAHUNAN">Tahunan</option>
+                </select>
+                
+                <div id="wrapDygHarian" style="display:flex; gap:10px;"><input type="date" id="dygDateHarian" onchange="processDashboardDyeing()"></div>
+                <div id="wrapDygMingguan" style="display:none; gap:10px;"><input type="date" id="dygDateStart" onchange="processDashboardDyeing()"> <span style="align-self:center;">s/d</span> <input type="date" id="dygDateEnd" onchange="processDashboardDyeing()"></div>
+                <div id="wrapDygBulanan" style="display:none; gap:10px;"><input type="month" id="dygMonth" onchange="processDashboardDyeing()"></div>
+                <div id="wrapDygTahunan" style="display:none; gap:10px;">
+                    <select id="dygYear" onchange="processDashboardDyeing()">
+                        <option value="2024">2024</option><option value="2025">2025</option><option value="2026" selected>2026</option><option value="2027">2027</option>
+                    </select>
+                </div>
+
+                <button class="btn-action btn-outline" onclick="loadDyeingData()" style="margin-left:auto;" title="Refresh Data Analisis Dyeing">🔄 Refresh Tab</button>
+                <span id="loadingIndicatorDygDash" style="display:none; color: var(--primary-color); margin-left:10px; font-size: 0.85rem;">⏳ Memperbarui Data...</span>
+            </div>
+
+            <div class="filter-box" id="filterKanbanDyeing" style="display:none;">
+                <strong>Pilih Tanggal Laporan (Kanban):</strong>
+                <input type="date" id="dateFilterKanban" onchange="loadDyeingData()">
+                <button class="btn-action btn-outline" onclick="loadDyeingData()" title="Refresh Kanban Order">🔄 Refresh Tab</button>
+                <span id="loadingIndicatorDyeing" style="display:none; color: var(--primary-color); margin-left:10px; font-size: 0.85rem;">⏳ Memuat Kanban...</span>
+            </div>
+
+            <div class="filter-box" id="filterResumeDyeing" style="display:none;">
+                <strong>Pilih Tanggal Akhir (7 Hari ke Belakang):</strong>
+                <input type="date" id="dateFilterResume" onchange="loadDyeingData()">
+                <button class="btn-action btn-outline" onclick="loadDyeingData()" title="Refresh Tabel Resume">🔄 Refresh Tab</button>
+                <span id="loadingIndicatorResume" style="display:none; color: var(--primary-color); margin-left:10px; font-size: 0.85rem;">⏳ Memuat Resume...</span>
+            </div>
+
+            <div class="filter-box" id="filterDashboardProduksi" style="display:none;">
+                <strong>Pilih Tanggal Produksi:</strong>
+                <input type="date" id="dateFilterProduksi" onchange="processDashboardProduksi()">
+                <button class="btn-action btn-outline" onclick="loadProduksiData()" title="Refresh Data Produksi">🔄 Refresh Tab</button>
+                <span id="loadingIndicatorProduksi" style="display:none; color: var(--primary-color); margin-left:10px; font-size: 0.85rem;">⏳ Mengekstrak Database...</span>
+            </div>
+
+            <!-- PAGE 1: DASHBOARD STOCK -->
+            <div id="pageDashboardStock" class="page active">
+                <div class="dashboard-grid" id="mainCardsGrid"></div>
+                <div class="section-title">📈 Trend Stock vs Standard (7 Hari Terakhir)</div>
+                <div class="chart-container" style="margin-bottom: 20px;"><div id="trendChartSmooth" style="height: 350px;"></div></div>
+                <div class="section-title">📦 Total & Kategori</div>
+                <div class="dashboard-grid" id="categoryGrid"></div>
+                <div class="section-title">🏷️ Status Stock</div>
+                <div class="dashboard-grid" id="statusGrid"></div>
+            </div>
+
+            <!-- PAGE 2: DETAIL STOCK -->
+            <div id="pageDetailStock" class="page">
+                <div class="dashboard-grid" id="detailSummaryCards" style="display:none; margin-bottom: 15px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
+                    <div class="card" style="--theme-color: var(--info-color);">
+                        <h4 class="text-info">📦 TOTAL STOK DARI DATA DIFILTER (Kg)</h4>
+                        <p class="value text-info" id="valDetailFilteredTotal" style="font-size: 1.8rem;">0</p>
+                    </div>
+                </div>
+                <div style="overflow-x:auto; max-height: 70vh;"><table id="tableStock"><thead></thead><tbody></tbody></table></div>
+            </div>
+
+            <!-- PAGE 3: DASHBOARD DYEING -->
+            <div id="pageDashboardDyeing" class="page">
+                <div class="dashboard-grid">
+                    <div class="card" style="--theme-color: var(--warning-color);"><h4 class="text-warning">🎯 Target (Kg)</h4><p class="value" id="valDygTarget">0</p></div>
+                    <div class="card" style="--theme-color: var(--info-color);"><h4 class="text-info">📦 Jumlah Order/Beban (Kg)</h4><p class="value" id="valDygOrder">0</p></div>
+                    <div class="card" style="--theme-color: var(--success-color);"><h4 class="text-success">✔️ Realisasi (Kg)</h4><p class="value" id="valDygRealized">0</p></div>
+                    <div class="card" style="--theme-color: var(--danger-color);"><h4 class="text-danger">⚠️ Order Pending (Kg)</h4><p class="value" id="valDygPending">0</p></div>
+                </div>
+                <div class="section-title">📈 Trend Performa Produksi Dyeing</div>
+                <div class="chart-container" style="margin-bottom: 20px;"><div id="trendChartDyeing" style="height: 400px;"></div></div>
+            </div>
+
+            <!-- PAGE 4: KANBAN ORDER DYEING -->
+            <div id="pageKanbanDyeing" class="page">
+                <div class="dashboard-grid" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-bottom: 15px;">
+                    <div class="card" style="--theme-color: var(--info-color);"><h4 class="text-info">Jumlah KIKC Order</h4><p class="value" id="valKbnKikcOrder">0</p></div>
+                    <div class="card" style="--theme-color: var(--success-color);"><h4 class="text-success">KIKC Terealisasi</h4><p class="value" id="valKbnKikcReal">0</p></div>
+                    <div class="card" style="--theme-color: var(--danger-color);"><h4 class="text-danger">KIKC Pending</h4><p class="value" id="valKbnKikcPend">0</p></div>
+                    <div class="card" style="--theme-color: var(--info-color);"><h4 class="text-info">Jumlah Order (Kg)</h4><p class="value" id="valKbnQtyOrder">0</p></div>
+                    <div class="card" style="--theme-color: var(--success-color);"><h4 class="text-success">Jml. Realisasi (Kg)</h4><p class="value" id="valKbnQtyReal">0</p></div>
+                    <div class="card" style="--theme-color: var(--danger-color);"><h4 class="text-danger">Pending (Kg)</h4><p class="value" id="valKbnQtyPend">0</p></div>
+                </div>
+                <div id="dyeingContainer" style="overflow-y:auto; max-height: 60vh; padding-right: 5px;"></div>
+            </div>
+
+            <!-- PAGE 5: RESUME ORDER DYEING -->
+            <div id="pageResumeDyeing" class="page">
+                <div class="section-title">📊 Resume Order Dyeing Per Benang (7 Hari)</div>
+                <div style="overflow-x:auto; max-height: 70vh;">
+                    <table id="tableResumeDyeing">
+                        <thead></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- PAGE 6: DASHBOARD PRODUKSI -->
+            <div id="pageDashboardProduksi" class="page">
+                <div class="dashboard-grid" style="grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));">
+                    <div class="card" style="--theme-color: var(--info-color);"><h4 class="text-info">🏭 Total Counter (Kodi)</h4><p class="value" id="valProdCounter">0</p></div>
+                    <div class="card" style="--theme-color: var(--success-color);"><h4 class="text-success">📦 Total Doffing (Kodi)</h4><p class="value" id="valProdDoffing">0</p></div>
+                    <div class="card" style="--theme-color: var(--warning-color);"><h4 class="text-warning">🏷️ Jumlah Brand Aktif</h4><p class="value" id="valProdBrand">0</p></div>
+                    <div class="card" style="--theme-color: var(--danger-color);"><h4 class="text-danger">🏢 Jumlah Cabang</h4><p class="value" id="valProdCabang">0</p></div>
+                </div>
+                
+                <div class="section-title">📈 Trend Doffing per Cabang (7 Hari Terakhir)</div>
+                <div class="chart-container" style="margin-bottom: 25px;"><div id="chartTrendProdDoffing" style="height: 350px;"></div></div>
+
+                <div class="section-title">📊 QTY Doffing per Brand & Cabang (Kodi)</div>
+                <div class="chart-container" style="margin-bottom: 25px;"><div id="chartProdDoffing" style="height: 400px;"></div></div>
+                
+                <div class="section-title">📊 QTY Counter per Brand & Cabang (Kodi)</div>
+                <div class="chart-container" style="margin-bottom: 25px;"><div id="chartProdCounter" style="height: 400px;"></div></div>
+            </div>
+            
+            <!-- PAGE 7: DETAIL VARIANT -->
+            <div id="pageDetailVariant" class="page">
+                <div class="card" style="text-align: center; padding: 50px 20px; margin-top: 20px; --theme-color: var(--info-color);">
+                    <h1 style="font-size: 3rem; margin: 0; text-shadow: none;">🚧</h1>
+                    <h4 class="text-info">Under Development</h4>
+                    <p style="opacity: 0.8; font-size: 1.1rem; text-shadow: none;">Halaman Detail Produksi per Variant sedang dalam tahap penyiapan data.</p>
+                </div>
+            </div>
+            
+            <!-- PAGE 8: DETAIL BRAND -->
+            <div id="pageDetailBrand" class="page">
+                <div class="card" style="text-align: center; padding: 50px 20px; margin-top: 20px; --theme-color: var(--danger-color);">
+                    <h1 style="font-size: 3rem; margin: 0; text-shadow: none;">🚧</h1>
+                    <h4 class="text-danger">Under Development</h4>
+                    <p style="opacity: 0.8; font-size: 1.1rem; text-shadow: none;">Halaman Detail Produksi per Brand sedang dalam tahap penyiapan data.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ================= VARIABEL GLOBAL =================
+        let globalRawStock = [];
+        let globalKbh = {};
+        let globalProdMap = {};
+        let globalTrendDataStock = null;
+        let globalStdTotalStock = 0;
+        
+        let globalDyeingStats = {}; 
+        let globalDyeingTargets = { harian: {}, bulanan: {} };
+        let globalMc = [];
+        let globalMcCaps = {}; 
+        let globalKikc = {};
+
+        let globalProduksiData = [];
+        
+        // Auto Update Config
+        let autoUpdateInterval = null;
+        const UPDATE_INTERVAL_MS = 60 * 60 * 1000; // 1 Jam
+        
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        const todayStr = `${yyyy}-${mm}-${dd}`;
+        const currentMonthStr = `${yyyy}-${mm}`;
+
+        document.getElementById('dygDateHarian').value = todayStr;
+        document.getElementById('dygDateEnd').value = todayStr;
+        let lastWeek = new Date(); lastWeek.setDate(lastWeek.getDate() - 6);
+        document.getElementById('dygDateStart').value = lastWeek.toISOString().split('T')[0];
+        document.getElementById('dygMonth').value = currentMonthStr;
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const btn = document.getElementById('themeToggle');
+            if (html.getAttribute('data-theme') === 'dark') {
+                html.removeAttribute('data-theme');
+                btn.innerHTML = '🌙 Dark Mode';
+            } else {
+                html.setAttribute('data-theme', 'dark');
+                btn.innerHTML = '☀️ Light Mode';
+            }
+            if(globalTrendDataStock) renderSmoothChart(globalTrendDataStock, globalStdTotalStock);
+            processDashboardDyeing(); 
+            processDashboardProduksi(); 
+        }
+
+        function switchPage(pageId, element) {
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            
+            let title = element.innerText.replace(/📈|🎨|📊|📋|📅|🏭|🧵|🏷️/g, '').trim();
+            document.getElementById('pageTitle').innerText = title;
+
+            document.getElementById('globalStockFilter').style.display = pageId.includes('Stock') ? 'flex' : 'none';
+            document.getElementById('filterDashboardDyeing').style.display = (pageId === 'pageDashboardDyeing') ? 'flex' : 'none';
+            document.getElementById('filterKanbanDyeing').style.display = (pageId === 'pageKanbanDyeing') ? 'flex' : 'none';
+            document.getElementById('filterResumeDyeing').style.display = (pageId === 'pageResumeDyeing') ? 'flex' : 'none'; 
+            document.getElementById('filterDashboardProduksi').style.display = (pageId === 'pageDashboardProduksi') ? 'flex' : 'none'; 
+            
+            let btn = document.getElementById('btnToggleDetail');
+            if (pageId === 'pageDashboardStock') {
+                document.getElementById('detailFilters').style.display = 'none';
+                document.getElementById('detailSummaryCards').style.display = 'none';
+                btn.innerHTML = '🔍 Lihat Detail';
+                btn.style.backgroundColor = 'var(--primary-color)';
+                btn.style.display = 'flex';
+            } else if (pageId === 'pageDetailStock') {
+                btn.style.display = 'flex';
+            } else {
+                btn.style.display = 'none';
+                document.getElementById('detailFilters').style.display = 'none';
+                document.getElementById('detailSummaryCards').style.display = 'none';
+            }
+            
+            // JEDA RENDER: Mengakali bug Plotly yang gagal menggambar pada tab tersembunyi
+            setTimeout(() => {
+                if (pageId === 'pageDashboardStock' && globalTrendDataStock) {
+                    renderSmoothChart(globalTrendDataStock, globalStdTotalStock);
+                }
+                if (pageId === 'pageDashboardDyeing') processDashboardDyeing();
+                if (pageId === 'pageDashboardProduksi') processDashboardProduksi();
+                window.dispatchEvent(new Event('resize')); 
+            }, 100);
+        }
+
+        function formatNumber(num) {
+            if(num === 0) return '-';
+            return parseFloat(num).toLocaleString('id-ID');
+        }
+
+        // ================= SISTEM UPDATE OTOMATIS =================
+        function updateTimestamp() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+            let tEl = document.getElementById('lastUpdateText');
+            if(tEl) {
+                tEl.innerText = 'Diupdate: ' + timeStr;
+                tEl.style.display = 'inline-block';
+            }
+        }
+
+        function forceUpdateAll() {
+            loadStockData();
+            loadDyeingData();
+            loadProduksiData();
+        }
+
+        function toggleAutoUpdate() {
+            const isAuto = document.getElementById('autoUpdateToggle').checked;
+            const statusText = document.getElementById('autoUpdateStatus');
+            if (isAuto) {
+                statusText.innerText = '(1 Jam)';
+                statusText.classList.remove('text-danger');
+                statusText.classList.add('text-success');
+                startAutoUpdate();
+            } else {
+                statusText.innerText = 'OFF';
+                statusText.classList.remove('text-success');
+                statusText.classList.add('text-danger');
+                stopAutoUpdate();
+            }
+        }
+
+        function startAutoUpdate() {
+            if (autoUpdateInterval) clearInterval(autoUpdateInterval);
+            autoUpdateInterval = setInterval(() => {
+                forceUpdateAll();
+            }, UPDATE_INTERVAL_MS);
+        }
+
+        function stopAutoUpdate() {
+            if (autoUpdateInterval) {
+                clearInterval(autoUpdateInterval);
+                autoUpdateInterval = null;
+            }
+        }
+
+        // ================= FITUR: FILTER LANJUTAN DETAIL STOCK =================
+        function toggleDetailFilters() {
+            let detailNavItem = document.querySelectorAll('.nav-item')[1]; 
+            if (!detailNavItem.classList.contains('active')) {
+                switchPage('pageDetailStock', detailNavItem);
+            }
+
+            const detailBox = document.getElementById('detailFilters');
+            const summaryBox = document.getElementById('detailSummaryCards');
+            const btn = document.getElementById('btnToggleDetail');
+            
+            if (detailBox.style.display === 'none') {
+                detailBox.style.display = 'flex';
+                summaryBox.style.display = 'grid'; 
+                btn.innerHTML = '❌ Tutup Filter Detail';
+                btn.style.backgroundColor = 'var(--danger-color)'; 
+                applyStockFilters();
+            } else {
+                detailBox.style.display = 'none';
+                summaryBox.style.display = 'none';
+                btn.innerHTML = '🔍 Lihat Detail';
+                btn.style.backgroundColor = 'var(--primary-color)';
+                
+                document.getElementById('filterKategori').value = "";
+                document.getElementById('filterNoBenang').value = "";
+                document.getElementById('filterStatus').value = "";
+                document.getElementById('filterCabang').value = "";
+                applyStockFilters();
+            }
+        }
+
+        function populateDetailDropdowns(stockArr) {
+            if(!stockArr || stockArr.length === 0) return;
+            let kats = new Set(), bngs = new Set(), stats = new Set(), cabs = new Set();
+            stockArr.forEach(r => {
+                let k = String(r['KATEGORI'] || '').trim().toUpperCase();
+                let b = String(r['NO BENANG'] || '').trim();
+                let s = String(r['STATUS'] || '').trim().toUpperCase();
+                let c = String(r['CABANG'] || '').trim().toUpperCase();
+                if(k) kats.add(k); if(b) bngs.add(b); if(s) stats.add(s); if(c) cabs.add(c);
+            });
+            const buildOpts = (set) => {
+                let html = ''; Array.from(set).sort().forEach(v => html += `<option value="${v}">${v}</option>`); return html;
+            };
+
+            let selK = document.getElementById('filterKategori').value;
+            let selB = document.getElementById('filterNoBenang').value;
+            let selS = document.getElementById('filterStatus').value;
+            let selC = document.getElementById('filterCabang').value;
+
+            document.getElementById('filterKategori').innerHTML = `<option value="">Semua Kategori</option>` + buildOpts(kats);
+            document.getElementById('filterNoBenang').innerHTML = `<option value="">Semua No Benang</option>` + buildOpts(bngs);
+            document.getElementById('filterStatus').innerHTML = `<option value="">Semua Status</option>` + buildOpts(stats);
+            document.getElementById('filterCabang').innerHTML = `<option value="">Semua Cabang</option>` + buildOpts(cabs);
+
+            document.getElementById('filterKategori').value = selK || "";
+            document.getElementById('filterNoBenang').value = selB || "";
+            document.getElementById('filterStatus').value = selS || "";
+            document.getElementById('filterCabang').value = selC || "";
+        }
+
+        function applyStockFilters() {
+            if (!globalRawStock || globalRawStock.length === 0) return;
+            let filteredStock = globalRawStock;
+            
+            if (document.getElementById('detailFilters').style.display !== 'none') {
+                let fKat = document.getElementById('filterKategori').value;
+                let fBng = document.getElementById('filterNoBenang').value;
+                let fStat = document.getElementById('filterStatus').value;
+                let fCab = document.getElementById('filterCabang').value;
+
+                filteredStock = globalRawStock.filter(r => {
+                    if (fKat && String(r['KATEGORI'] || '').trim().toUpperCase() !== fKat) return false;
+                    if (fBng && String(r['NO BENANG'] || '').trim() !== fBng) return false;
+                    if (fStat && String(r['STATUS'] || '').trim().toUpperCase() !== fStat) return false;
+                    if (fCab && String(r['CABANG'] || '').trim().toUpperCase() !== fCab) return false;
+                    return true;
+                });
+            }
+            renderDetailTable(filteredStock);
+        }
+
+        function renderDetailTable(stockArr) {
+            let uniqueStatuses = new Set(['BAKU', 'FRESH', 'RETUR', 'SUBSTORE']); 
+            let arrStatuses = Array.from(uniqueStatuses).sort();
+            const catOrder = ['FAST MOVING', 'MOVING', 'NON MOVING', 'R&D'];
+            let pivotData = {};
+            catOrder.forEach(c => pivotData[c] = {});
+
+            let sumTotalFiltered = 0;
+
+            stockArr.forEach(row => {
+                const stockVal = parseFloat(row['S.AKHIR']) || 0;
+                const cabang = String(row['CABANG'] || '').trim().toUpperCase();
+                const stat = String(row['STATUS'] || '').trim().toUpperCase();
+                const kat = String(row['KATEGORI'] || '').trim().toUpperCase();
+                const noBng = String(row['NO BENANG'] || '-').trim();
+                
+                sumTotalFiltered += stockVal;
+
+                if(pivotData[kat] !== undefined) {
+                    if(!pivotData[kat][noBng]) {
+                        pivotData[kat][noBng] = { total: 0, PGG: {}, PKW: {} };
+                        arrStatuses.forEach(s => { pivotData[kat][noBng].PGG[s] = 0; pivotData[kat][noBng].PKW[s] = 0; });
+                    }
+                    pivotData[kat][noBng].total += stockVal;
+                    if(cabang === 'PGG' || cabang === 'PKW') {
+                        if(pivotData[kat][noBng][cabang][stat] !== undefined) pivotData[kat][noBng][cabang][stat] += stockVal;
+                    }
+                }
+            });
+
+            document.getElementById('valDetailFilteredTotal').innerText = formatNumber(sumTotalFiltered);
+
+            const theadStock = document.querySelector('#tableStock thead');
+            const tbodyStock = document.querySelector('#tableStock tbody');
+            let thSub = '';
+            arrStatuses.forEach(s => thSub += `<th>${s}</th>`);
+            arrStatuses.forEach(s => thSub += `<th>${s}</th>`);
+            theadStock.innerHTML = `<tr><th rowspan="2" style="vertical-align: middle;">No Benang</th><th colspan="${arrStatuses.length}">PGG</th><th colspan="${arrStatuses.length}">PKW</th><th rowspan="2" style="vertical-align: middle;">Total (Kg)</th><th rowspan="2" style="vertical-align: middle;">Std Stock (Kg)</th><th rowspan="2" style="vertical-align: middle;">Lifetime</th></tr><tr>${thSub}</tr>`;
+
+            let trHtml = '';
+            let totalCols = 4 + (arrStatuses.length * 2);
+            
+            catOrder.forEach(kat => {
+                let items = Object.keys(pivotData[kat]).map(k => ({ name: k, data: pivotData[kat][k] }));
+                items = items.filter(i => i.data.total > 0);
+                if(items.length === 0) return;
+                items.sort((a, b) => b.data.total - a.data.total);
+
+                trHtml += `<tr class="row-category"><td colspan="${totalCols}">📦 KATEGORI: ${kat}</td></tr>`;
+                let subTot = { total: 0, std: 0, PGG: {}, PKW: {} };
+                arrStatuses.forEach(s => { subTot.PGG[s] = 0; subTot.PKW[s] = 0; });
+
+                items.forEach(item => {
+                    let noBng = item.name;
+                    let realStock = item.data.total;
+                    let avgBln = globalKbh[noBng] || 0;
+                    let avgHr = avgBln / 30;
+                    let prod = globalProdMap[noBng] || 'LOKAL';
+                    let hk = (String(prod).includes('IMPORT')) ? 60 : 14;
+                    
+                    let stdStockItem = avgHr * hk;
+                    subTot.total += realStock;
+                    subTot.std += stdStockItem;
+
+                    let isUnder = (stdStockItem > 0 && realStock < stdStockItem);
+                    let nameHtml = isUnder ? `${noBng} <span class="text-danger" style="font-size:1.1em; margin-left:5px;" title="Di Bawah Standar!">⚠️</span>` : noBng;
+                    let lifetimeStr = (avgHr > 0) ? formatNumber((realStock / avgHr).toFixed(0)) + ' Hari' : '-';
+
+                    trHtml += `<tr><td>${nameHtml}</td>`;
+                    arrStatuses.forEach(s => { let val = item.data.PGG[s]; subTot.PGG[s] += val; trHtml += `<td class="num">${formatNumber(val)}</td>`; });
+                    arrStatuses.forEach(s => { let val = item.data.PKW[s]; subTot.PKW[s] += val; trHtml += `<td class="num">${formatNumber(val)}</td>`; });
+                    trHtml += `<td class="num" style="font-weight:bold;">${formatNumber(realStock)}</td>`;
+                    trHtml += `<td class="num text-warning">${formatNumber(stdStockItem.toFixed(1))}</td>`;
+                    trHtml += `<td class="num">${lifetimeStr}</td></tr>`;
+                });
+
+                trHtml += `<tr class="row-subtotal"><td>Sub Total ${kat}</td>`;
+                arrStatuses.forEach(s => trHtml += `<td class="num">${formatNumber(subTot.PGG[s])}</td>`);
+                arrStatuses.forEach(s => trHtml += `<td class="num">${formatNumber(subTot.PKW[s])}</td>`);
+                trHtml += `<td class="num text-primary" style="font-weight:bold;">${formatNumber(subTot.total)}</td>`;
+                trHtml += `<td class="num text-warning">${formatNumber(subTot.std.toFixed(1))}</td>`;
+                trHtml += `<td class="num">-</td></tr>`;
+            });
+            tbodyStock.innerHTML = trHtml || `<tr><td colspan="${totalCols}" style="text-align:center;">Tidak ada data pada filter yang dipilih.</td></tr>`;
+        }
+
+        // ================= API FETCHERS =================
+        function loadStockData() {
+            let selectedDate = document.getElementById('dateFilterStock').value;
+            document.getElementById('loadingIndicatorStock').style.display = 'inline-block';
+            google.script.run.withSuccessHandler(renderStockData).withFailureHandler(err => console.error(err)).getStockData(selectedDate ? selectedDate : null);
+        }
+
+        function loadDyeingData() {
+            let activePage = document.querySelector('.page.active');
+            let pId = activePage ? activePage.id : '';
+            let selectedDate = todayStr;
+
+            if (pId === 'pageKanbanDyeing') {
+                selectedDate = document.getElementById('dateFilterKanban').value || todayStr;
+                document.getElementById('loadingIndicatorDyeing').style.display = 'inline-block';
+            } else if (pId === 'pageResumeDyeing') {
+                selectedDate = document.getElementById('dateFilterResume').value || todayStr;
+                document.getElementById('loadingIndicatorResume').style.display = 'inline-block';
+            } else {
+                selectedDate = document.getElementById('dygDateHarian').value || todayStr; 
+                let dashInd = document.getElementById('loadingIndicatorDygDash');
+                if(dashInd) dashInd.style.display = 'inline-block';
+            }
+            
+            google.script.run.withSuccessHandler(handleDyeingData).withFailureHandler(err => console.error(err)).getDyeingData(selectedDate);
+        }
+
+        function loadProduksiData() {
+            document.getElementById('loadingIndicatorProduksi').style.display = 'inline-block';
+            google.script.run.withSuccessHandler(handleProduksiData).withFailureHandler(err => {
+                alert("Akses ke file spreadsheet Eksternal Ditolak atau Error. Pastikan URL dan Izin Anda Benar.");
+                console.error(err);
+                document.getElementById('loadingIndicatorProduksi').style.display = 'none';
+            }).getProduksiData();
+        }
+
+        function handleProduksiData(res) {
+            document.getElementById('loadingIndicatorProduksi').style.display = 'none';
+            if (res.error) {
+                alert("Error mengekstrak database Produksi: " + res.error);
+                return;
+            }
+            if (res.data) {
+                globalProduksiData = res.data;
+                if (res.availableDates && res.availableDates.length > 0) {
+                    let dInput = document.getElementById('dateFilterProduksi');
+                    if (!dInput.value) dInput.value = res.availableDates[0];
+                }
+                processDashboardProduksi();
+                updateTimestamp();
+            }
+        }
+
+        function handleDyeingData(data) {
+            let iKanban = document.getElementById('loadingIndicatorDyeing');
+            let iDash = document.getElementById('loadingIndicatorDygDash');
+            let iRes = document.getElementById('loadingIndicatorResume');
+            if(iKanban) iKanban.style.display = 'none';
+            if(iDash) iDash.style.display = 'none';
+            if(iRes) iRes.style.display = 'none';
+            
+            if (data.mc) globalMc = data.mc;
+            if (data.mcCaps) globalMcCaps = data.mcCaps; 
+            if (data.kikc) globalKikc = data.kikc;
+            if (data.stats) globalDyeingStats = data.stats;
+            if (data.targets) globalDyeingTargets = data.targets;
+            
+            // Sinkronisasi otomatis ke semua filter tanggal agar tidak menampilkan blank
+            if (data.activeKanbanDate) {
+                document.getElementById('dateFilterKanban').value = data.activeKanbanDate;
+                document.getElementById('dateFilterResume').value = data.activeKanbanDate;
+                document.getElementById('dygDateHarian').value = data.activeKanbanDate;
+            }
+            
+            renderKanban(data.kanban, data.activeKanbanDate);
+            
+            setTimeout(() => {
+                let activePage = document.querySelector('.page.active');
+                if(activePage && activePage.id === 'pageDashboardDyeing') {
+                    processDashboardDyeing();
+                }
+            }, 50);
+            
+            if(data.resumeData && data.last7Dates) {
+                renderResumeDyeing(data.resumeData, data.last7Dates);
+            }
+            updateTimestamp();
+        }
+
+        function renderStockData(data) {
+            document.getElementById('loadingIndicatorStock').style.display = 'none';
+            if(!data || !data.stock) return;
+
+            const dateInput = document.getElementById('dateFilterStock');
+            if(!dateInput.value && data.activeStockDate) dateInput.value = data.activeStockDate;
+
+            globalRawStock = data.stock;
+            globalKbh = data.kbh;
+            globalProdMap = {}; 
+            globalRawStock.forEach(r => globalProdMap[String(r['NO BENANG'] || '').trim()] = String(r['PROD'] || 'LOKAL').trim().toUpperCase());
+
+            let sumTotal = 0;
+            let categories = { 'FAST MOVING': { total: 0, cabang: {} }, 'MOVING': { total: 0, cabang: {} }, 'NON MOVING': { total: 0, cabang: {} }, 'R&D': { total: 0, cabang: {} } };
+            let statusSums = { 'BAKU': { total: 0, cabang: {} }, 'FRESH': { total: 0, cabang: {} }, 'RETUR': { total: 0, cabang: {} }, 'SUBSTORE': { total: 0, cabang: {} } };
+            
+            globalRawStock.forEach(row => {
+                const stockVal = parseFloat(row['S.AKHIR']) || 0;
+                const cabang = String(row['CABANG'] || '').trim().toUpperCase();
+                const stat = String(row['STATUS'] || '').trim().toUpperCase();
+                const kat = String(row['KATEGORI'] || '').trim().toUpperCase();
+                
+                sumTotal += stockVal;
+
+                if (categories[kat]) {
+                    categories[kat].total += stockVal;
+                    categories[kat].cabang[cabang] = (categories[kat].cabang[cabang] || 0) + stockVal;
+                }
+                if (statusSums[stat]) {
+                    statusSums[stat].total += stockVal;
+                    statusSums[stat].cabang[cabang] = (statusSums[stat].cabang[cabang] || 0) + stockVal;
+                }
+            });
+
+            let total_base_std = 0;
+            let pivotMap = { 'FAST MOVING':{}, 'MOVING':{}, 'NON MOVING':{}, 'R&D':{} };
+            
+            globalRawStock.forEach(row => {
+                const kat = String(row['KATEGORI'] || '').trim().toUpperCase();
+                const noBng = String(row['NO BENANG'] || '-').trim();
+                if(pivotMap[kat]) pivotMap[kat][noBng] = true;
+            });
+
+            Object.keys(pivotMap).forEach(kat => {
+                Object.keys(pivotMap[kat]).forEach(noBng => {
+                    let avgBln = globalKbh[noBng] || 0;
+                    let avgHr = avgBln / 30;
+                    let prod = globalProdMap[noBng] || 'LOKAL';
+                    let hk = (String(prod).includes('IMPORT')) ? 60 : 14;
+                    total_base_std += (avgHr * hk);
+                });
+            });
+            
+            let final_std_total = (total_base_std * 1.17 * 1.27 * 15) / 12;
+
+            globalTrendDataStock = data.trendData;
+            globalStdTotalStock = final_std_total;
+            
+            setTimeout(() => {
+                let activePage = document.querySelector('.page.active');
+                if(activePage && activePage.id === 'pageDashboardStock') {
+                    try { renderSmoothChart(data.trendData, final_std_total); } catch(e) { console.error(e); }
+                }
+            }, 50);
+
+            let mainGrid = document.getElementById('mainCardsGrid');
+            if(mainGrid) {
+                mainGrid.innerHTML = `
+                    <div class="card" style="--theme-color: var(--info-color);"><h4 class="text-info">TOTAL REAL STOCK</h4><p class="value">${formatNumber(sumTotal)}</p></div>
+                    <div class="card" style="--theme-color: var(--danger-color);"><h4 class="text-danger">TOTAL STANDARD STOCK</h4><p class="value">${formatNumber(final_std_total.toFixed(2))}</p></div>
+                `;
+            }
+
+            let catGrid = document.getElementById('categoryGrid');
+            if(catGrid) {
+                let catHtml = '';
+                const CSSPaletteKat = { 'FAST MOVING': 'var(--success-color)', 'MOVING': 'var(--info-color)', 'NON MOVING': 'var(--warning-color)', 'R&D': '#a855f7' };
+                ['FAST MOVING', 'MOVING', 'NON MOVING', 'R&D'].forEach(k => {
+                    const cData = categories[k];
+                    let cabangStr = '';
+                    for(let c in cData.cabang) cabangStr += `<div class="branch-row"><span>${c}</span> <span>${formatNumber(cData.cabang[c])}</span></div>`;
+                    if(cabangStr) cabangStr = `<div class="branch-details">${cabangStr}</div>`;
+                    
+                    let pColor = CSSPaletteKat[k] || 'var(--info-color)';
+                    catHtml += `<div class="card" style="--theme-color: ${pColor};"><h4 style="color:${pColor}; text-shadow:none;">${k}</h4><p class="value">${formatNumber(cData.total)}</p>${cabangStr}</div>`;
+                });
+                catGrid.innerHTML = catHtml;
+            }
+
+            let statGrid = document.getElementById('statusGrid');
+            if(statGrid) {
+                const CSSPaletteStat = ['var(--warning-color)', 'var(--danger-color)', 'var(--success-color)', '#a855f7'];
+                let statusHtml = '';
+                let sIdx = 0;
+                ['BAKU', 'FRESH', 'RETUR', 'SUBSTORE'].forEach(s => {
+                    let nColor = CSSPaletteStat[sIdx];
+                    let cabangStr = '';
+                    let totalS = statusSums[s] ? statusSums[s].total : 0;
+                    if (statusSums[s]) {
+                        for(let c in statusSums[s].cabang) cabangStr += `<div class="branch-row"><span>${c}</span> <span>${formatNumber(statusSums[s].cabang[c])}</span></div>`;
+                    }
+                    if(cabangStr) cabangStr = `<div class="branch-details">${cabangStr}</div>`;
+                    statusHtml += `<div class="card" style="--theme-color: ${nColor};"><h4 style="color:${nColor}; text-shadow:none;">${s}</h4><p class="value">${formatNumber(totalS)}</p>${cabangStr}</div>`;
+                    sIdx++;
+                });
+                statGrid.innerHTML = statusHtml || `<div class="card"><h4>Data Kosong</h4><p class="value">-</p></div>`;
+            }
+
+            populateDetailDropdowns(globalRawStock);
+            applyStockFilters();
+            updateTimestamp();
+        }
+
+        // ================= CHART RENDERS (NORMAL/LINEAR SHAPE) =================
+        function renderSmoothChart(trendData, stdTotal) {
+            if(!trendData || trendData.length === 0) return;
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            
+            const style = getComputedStyle(document.body);
+            const colorInfo = style.getPropertyValue('--info-color').trim();
+            const colorDanger = style.getPropertyValue('--danger-color').trim();
+
+            const dates = trendData.map(d => d.date);
+            const totals = trendData.map(d => d.total);
+            
+            const traceReal = { x: dates, y: totals, name: 'Real Stock', type: 'scatter', mode: 'lines+markers', line: { shape: 'linear', width: 4, color: colorInfo }, marker: { size: 6 }};
+            const traceStd = { x: dates, y: dates.map(() => stdTotal), name: 'Standard Stock', type: 'scatter', mode: 'lines', line: { shape: 'linear', width: 3, color: colorDanger, dash: 'dash' } };
+            
+            if(isDark) { traceReal.fill = 'tozeroy'; traceReal.fillcolor = 'rgba(0, 255, 255, 0.1)'; } 
+            else { traceReal.fill = 'tozeroy'; traceReal.fillcolor = 'rgba(37, 99, 235, 0.1)'; }
+
+            const layout = { 
+                paper_bgcolor: 'rgba(0,0,0,0)', 
+                plot_bgcolor: 'rgba(0,0,0,0)', 
+                font: { color: isDark ? '#e2e8f0' : '#333333', size: 11 }, 
+                margin: { l: 50, r: 20, b: 40, t: 20 }, 
+                legend: { orientation: 'h', y: 1.1 }, 
+                xaxis: { showgrid: true, gridcolor: isDark ? '#1e293b' : '#e0e0e0', type: 'category' }, 
+                yaxis: { showgrid: true, gridcolor: isDark ? '#1e293b' : '#e0e0e0' },
+                hoverlabel: { 
+                    bgcolor: isDark ? '#0b1120' : '#ffffff', 
+                    bordercolor: isDark ? '#1e293b' : '#e0e0e0', 
+                    font: { color: isDark ? '#e2e8f0' : '#333333' } 
+                }
+            };
+            Plotly.newPlot('trendChartSmooth', [traceReal, traceStd], layout, {responsive: true, displayModeBar: false});
+        }
+
+        function drawDyeingChart(xLabels, yTarget, yOrder, yReal, yPend) {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const gridColor = isDark ? '#1e293b' : '#e0e0e0';
+            
+            const style = getComputedStyle(document.body);
+            const colorSuccess = style.getPropertyValue('--success-color').trim();
+            const colorWarning = style.getPropertyValue('--warning-color').trim();
+            const colorDanger = style.getPropertyValue('--danger-color').trim();
+            const colorInfo = style.getPropertyValue('--info-color').trim();
+
+            const trTarget = { x: xLabels, y: yTarget, name: 'Target', type: 'scatter', mode: 'lines', line: { shape: 'linear', width: 3, color: colorWarning, dash: 'dash' }};
+            const trOrder = { x: xLabels, y: yOrder, name: 'Jumlah Order', type: 'scatter', mode: 'lines+markers', line: { shape: 'linear', width: 4, color: colorInfo }};
+            const trReal = { x: xLabels, y: yReal, name: 'Realisasi', type: 'scatter', mode: 'lines+markers', line: { shape: 'linear', width: 4, color: colorSuccess }};
+            const trPend = { x: xLabels, y: yPend, name: 'Pending', type: 'scatter', mode: 'lines+markers', line: { shape: 'linear', width: 4, color: colorDanger }};
+
+            const layout = { 
+                paper_bgcolor: 'rgba(0,0,0,0)', 
+                plot_bgcolor: 'rgba(0,0,0,0)', 
+                font: { color: isDark ? '#e2e8f0' : '#333333', size: 11 }, 
+                margin: { l: 50, r: 20, b: 40, t: 20 }, 
+                legend: { orientation: 'h', y: 1.1 }, 
+                xaxis: { showgrid: true, gridcolor: gridColor, type: 'category' }, 
+                yaxis: { showgrid: true, gridcolor: gridColor }, 
+                hovermode: 'x unified',
+                hoverlabel: { 
+                    bgcolor: isDark ? '#0b1120' : '#ffffff', 
+                    bordercolor: isDark ? '#1e293b' : '#e0e0e0', 
+                    font: { color: isDark ? '#e2e8f0' : '#333333' } 
+                }
+            };
+            Plotly.newPlot('trendChartDyeing', [trOrder, trReal, trPend, trTarget], layout, {responsive: true, displayModeBar: false});
+        }
+
+        // ================= DASHBOARD DYEING LOGIC (VERSI STABIL / ORIGINAL) =================
+        function toggleDashboardFilter() {
+            let mode = document.getElementById('dygFilterType').value;
+            document.getElementById('wrapDygHarian').style.display = (mode === 'HARIAN') ? 'flex' : 'none';
+            document.getElementById('wrapDygMingguan').style.display = (mode === 'MINGGUAN') ? 'flex' : 'none';
+            document.getElementById('wrapDygBulanan').style.display = (mode === 'BULANAN') ? 'flex' : 'none';
+            document.getElementById('wrapDygTahunan').style.display = (mode === 'TAHUNAN') ? 'flex' : 'none';
+            
+            setTimeout(() => { processDashboardDyeing(); }, 50);
+        }
+
+        function processDashboardDyeing() {
+            let mode = document.getElementById('dygFilterType').value;
+            let xL = [], yT = [], yO = [], yR = [], yP = [];
+            let sumT = 0, sumO = 0, sumR = 0, sumP = 0;
+
+            if (mode === 'HARIAN') {
+                let dStr = document.getElementById('dygDateHarian').value;
+                if(!dStr) return;
+                
+                // Ambil rentang 7 hari ke belakang
+                let tDateObj = new Date(dStr + 'T00:00:00');
+                let targetDates = [];
+                for(let i = 6; i >= 0; i--) {
+                    let d = new Date(tDateObj);
+                    d.setDate(d.getDate() - i);
+                    let mm = ('0' + (d.getMonth() + 1)).slice(-2);
+                    let dd = ('0' + d.getDate()).slice(-2);
+                    targetDates.push(`${d.getFullYear()}-${mm}-${dd}`);
+                }
+
+                targetDates.forEach(ds => {
+                    let mIdx = parseInt(ds.split('-')[1], 10);
+                    let tar = globalDyeingTargets.harian[mIdx] || 0;
+                    let stat = globalDyeingStats[ds] || {order:0, realized:0, pending:0};
+
+                    // FILTER: Hanya masukkan ke chart jika ada order (order > 0)
+                    if (stat.order > 0) {
+                        xL.push(ds); 
+                        yT.push(tar); 
+                        yO.push(stat.order); 
+                        yR.push(stat.realized); 
+                        yP.push(stat.pending);
+                    }
+                });
+                
+                // Nilai kartu ringkasan di atas tetap mengambil tanggal yang sedang aktif dipilih
+                let sTar = globalDyeingTargets.harian[parseInt(dStr.split('-')[1], 10)] || 0;
+                let sStat = globalDyeingStats[dStr] || {order:0, realized:0, pending:0};
+                sumT = sTar; sumO = sStat.order; sumR = sStat.realized; sumP = sStat.pending;
+            } 
+            else if (mode === 'MINGGUAN') {
+                let start = document.getElementById('dygDateStart').value;
+                let end = document.getElementById('dygDateEnd').value;
+                if(!start || !end) return;
+                
+                let sD = new Date(start + 'T00:00:00');
+                let eD = new Date(end + 'T00:00:00');
+                let loopD = new Date(sD);
+                
+                while(loopD <= eD) {
+                    let mm = ('0' + (loopD.getMonth() + 1)).slice(-2);
+                    let dd = ('0' + loopD.getDate()).slice(-2);
+                    let ds = `${loopD.getFullYear()}-${mm}-${dd}`;
+                    
+                    let mIdx = parseInt(ds.split('-')[1], 10);
+                    let tar = globalDyeingTargets.harian[mIdx] || 0;
+                    let stat = globalDyeingStats[ds] || {order:0, realized:0, pending:0};
+                    
+                    // FILTER: Lewati tanggal jika order bernilai 0
+                    if (stat.order > 0) {
+                        xL.push(ds); 
+                        yT.push(tar); 
+                        yO.push(stat.order); 
+                        yR.push(stat.realized); 
+                        yP.push(stat.pending);
+                    }
+
+                    // Akumulasi total card di atas
+                    sumT += tar; 
+                    sumO += stat.order; 
+                    sumR += stat.realized; 
+                    sumP += stat.pending;
+                    
+                    loopD.setDate(loopD.getDate() + 1);
+                }
+            }
+            else if (mode === 'BULANAN') {
+                let ym = document.getElementById('dygMonth').value; 
+                if(!ym) return;
+                let [yr, mStr] = ym.split('-'); let mIdx = parseInt(mStr, 10);
+                
+                let weeks = [{n: 'Minggu 1', s:1, e:7}, {n: 'Minggu 2', s:8, e:14}, {n: 'Minggu 3', s:15, e:21}, {n: 'Minggu 4', s:22, e:28}, {n: 'Minggu 5', s:29, e:31}];
+                let tarHr = globalDyeingTargets.harian[mIdx] || 0;
+
+                weeks.forEach(wk => {
+                    let wO=0, wR=0, wP=0, daysCnt=0;
+                    for(let d=wk.s; d<=wk.e; d++) {
+                        let test = new Date(yr, mIdx-1, d);
+                        if(test.getMonth() !== (mIdx-1)) continue; 
+                        daysCnt++;
+                        let ds = `${yr}-${mStr}-${('0'+d).slice(-2)}`;
+                        let stat = globalDyeingStats[ds] || {order:0, realized:0, pending:0};
+                        wO += stat.order; wR += stat.realized; wP += stat.pending;
+                    }
+                    
+                    // Filter minggu yang tidak ada order
+                    if (wO > 0) {
+                        xL.push(wk.n); 
+                        yT.push(tarHr * daysCnt); 
+                        yO.push(wO); 
+                        yR.push(wR); 
+                        yP.push(wP);
+                    }
+                });
+                
+                sumT = globalDyeingTargets.bulanan[mIdx] || 0;
+                sumO = yO.reduce((a,b)=>a+b,0); sumR = yR.reduce((a,b)=>a+b,0); sumP = yP.reduce((a,b)=>a+b,0);
+            }
+            else if (mode === 'TAHUNAN') {
+                let yr = document.getElementById('dygYear').value;
+                let mNames = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Ags", "Sep", "Okt", "Nov", "Des"];
+                
+                for(let m=1; m<=12; m++) {
+                    let tar = globalDyeingTargets.bulanan[m] || 0;
+                    sumT += tar;
+
+                    let prefix = `${yr}-${('0'+m).slice(-2)}`;
+                    let mO=0, mR=0, mP=0;
+                    
+                    Object.keys(globalDyeingStats).forEach(ds => {
+                        if(ds.startsWith(prefix)) {
+                            mO += globalDyeingStats[ds].order;
+                            mR += globalDyeingStats[ds].realized;
+                            mP += globalDyeingStats[ds].pending;
+                        }
+                    });
+                    
+                    // Filter bulan yang tidak ada order
+                    if (mO > 0) {
+                        xL.push(mNames[m-1]);
+                        yT.push(tar);
+                        yO.push(mO); 
+                        yR.push(mR); 
+                        yP.push(mP);
+                    }
+                    sumO += mO; sumR += mR; sumP += mP;
+                }
+            }
+
+            document.getElementById('valDygTarget').innerText = formatNumber(sumT);
+            document.getElementById('valDygOrder').innerText = formatNumber(sumO);
+            document.getElementById('valDygRealized').innerText = formatNumber(sumR);
+            document.getElementById('valDygPending').innerText = formatNumber(sumP);
+            
+            drawDyeingChart(xL, yT, yO, yR, yP);
+        }
+
+        // ================= DASHBOARD PRODUKSI =================
+        function processDashboardProduksi() {
+            if (!globalProduksiData || globalProduksiData.length === 0) return;
+
+            let filterDate = document.getElementById('dateFilterProduksi').value;
+            if (!filterDate) return;
+
+            let filtered = globalProduksiData.filter(d => d.date === filterDate);
+
+            let sumCounter = 0, sumDoffing = 0;
+            let uniqueBrands = new Set();
+            let uniqueCabangs = new Set();
+
+            filtered.forEach(r => {
+                sumCounter += r.counter;
+                sumDoffing += r.doffing;
+                uniqueBrands.add(r.brand);
+                uniqueCabangs.add(r.cabang);
+            });
+
+            document.getElementById('valProdCounter').innerText = formatNumber(Math.round(sumCounter));
+            document.getElementById('valProdDoffing').innerText = formatNumber(Math.round(sumDoffing));
+            document.getElementById('valProdBrand').innerText = formatNumber(uniqueBrands.size);
+            document.getElementById('valProdCabang').innerText = formatNumber(uniqueCabangs.size);
+
+            let brandsArray = Array.from(uniqueBrands).sort();
+            let cabangsArray = Array.from(uniqueCabangs).sort();
+
+            let tracesDoff = [];
+            let tracesCount = [];
+
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const style = getComputedStyle(document.body);
+            const cabColors = [
+                style.getPropertyValue('--info-color').trim(),
+                style.getPropertyValue('--success-color').trim(),
+                style.getPropertyValue('--warning-color').trim(),
+                style.getPropertyValue('--danger-color').trim(),
+                '#a855f7' 
+            ];
+
+            cabangsArray.forEach((cab, idx) => {
+                let yDoff = [];
+                let yCount = [];
+                brandsArray.forEach(br => {
+                    let row = filtered.find(d => d.brand === br && d.cabang === cab);
+                    yDoff.push(row ? Math.round(row.doffing) : 0);
+                    yCount.push(row ? Math.round(row.counter) : 0);
+                });
+                let cabColor = cabColors[idx % cabColors.length];
+                tracesDoff.push({ x: brandsArray, y: yDoff, name: cab, type: 'bar', marker: { color: cabColor } });
+                tracesCount.push({ x: brandsArray, y: yCount, name: cab, type: 'bar', marker: { color: cabColor } });
+            });
+
+            const gridColor = isDark ? '#1e293b' : '#e0e0e0';
+            const layoutOpt = {
+                paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)', barmode: 'group',
+                font: { color: isDark ? '#e2e8f0' : '#333333', size: 11 }, margin: { l: 50, r: 20, b: 60, t: 20 },
+                legend: { orientation: 'h', y: 1.1 },
+                xaxis: { showgrid: true, gridcolor: gridColor, type: 'category', tickangle: -45 },
+                yaxis: { showgrid: true, gridcolor: gridColor },
+                hoverlabel: { bgcolor: isDark ? '#0b1120' : '#ffffff', bordercolor: isDark ? '#1e293b' : '#e0e0e0', font: { color: isDark ? '#e2e8f0' : '#333333' } }
+            };
+
+            Plotly.newPlot('chartProdDoffing', tracesDoff, layoutOpt, {responsive: true, displayModeBar: false});
+            Plotly.newPlot('chartProdCounter', tracesCount, layoutOpt, {responsive: true, displayModeBar: false});
+
+            // TREND DOFFING 7 HARI
+            let targetD = new Date(filterDate + 'T00:00:00');
+            let trendDates = [];
+            for(let i=6; i>=0; i--) {
+                let d = new Date(targetD);
+                d.setDate(d.getDate() - i);
+                let mm = ('0' + (d.getMonth()+1)).slice(-2);
+                let day = ('0' + d.getDate()).slice(-2);
+                trendDates.push(`${d.getFullYear()}-${mm}-${day}`);
+            }
+
+            let filtered7Days = globalProduksiData.filter(d => trendDates.includes(d.date));
+            let trendCabangs = new Set();
+            filtered7Days.forEach(r => trendCabangs.add(r.cabang));
+            
+            let trendCabangData = {};
+            trendCabangs.forEach(cab => {
+                trendCabangData[cab] = {};
+                trendDates.forEach(d => trendCabangData[cab][d] = 0);
+            });
+
+            filtered7Days.forEach(r => {
+                trendCabangData[r.cabang][r.date] += r.doffing;
+            });
+
+            let tracesTrend = [];
+            Array.from(trendCabangs).sort().forEach((cab, idx) => {
+                let yVals = trendDates.map(d => Math.round(trendCabangData[cab][d]));
+                tracesTrend.push({
+                    x: trendDates, y: yVals, name: cab, type: 'scatter', mode: 'lines+markers',
+                    line: { shape: 'linear', width: 3, color: cabColors[idx % cabColors.length] }, marker: { size: 6 }
+                });
+            });
+
+            const layoutTrend = {
+                paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)', 
+                font: { color: isDark ? '#e2e8f0' : '#333333', size: 11 }, margin: { l: 50, r: 20, b: 40, t: 20 },
+                legend: { orientation: 'h', y: 1.1 }, xaxis: { showgrid: true, gridcolor: gridColor, type: 'category' },
+                yaxis: { showgrid: true, gridcolor: gridColor }, hovermode: 'x unified',
+                hoverlabel: { bgcolor: isDark ? '#0b1120' : '#ffffff', bordercolor: isDark ? '#1e293b' : '#e0e0e0', font: { color: isDark ? '#e2e8f0' : '#333333' } }
+            };
+
+            Plotly.newPlot('chartTrendProdDoffing', tracesTrend, layoutTrend, {responsive: true, displayModeBar: false});
+        }
+
+        // ================= KANBAN DYEING LOGIC (SMART GROUPING) =================
+        function renderKanban(orders, filterDateStr) {
+            let kikcOrder = 0, kikcReal = 0, kikcPend = 0;
+            let qtyOrder = 0, qtyReal = 0, qtyPend = 0;
+
+            const mcOrder = [...globalMc]; 
+            let dyeingGroups = {};
+            mcOrder.forEach(mc => { dyeingGroups[mc] = []; });
+
+            let groupedObj = {};
+
+            if (orders && orders.length > 0) {
+                orders.forEach(row => {
+                    let qty = parseFloat(row['QTY (Kg)']) || 0;
+                    let rClp = row['REAL CLP'] || "";
+                    let kikcRaw = row['NO KIKC'] ? row['NO KIKC'].toString().trim().toUpperCase() : '';
+                    
+                    kikcOrder++;
+                    qtyOrder += qty;
+
+                    if (rClp === filterDateStr) {
+                        kikcReal++;
+                        qtyReal += qty;
+                    } else {
+                        kikcPend++;
+                        qtyPend += qty;
+                    }
+
+                    let mcName = (row['NO MC'] || '').toString().trim().toUpperCase();
+                    let cycle = row['CYCLE'] || '';
+                    let tglRph = row['TGL RPH'] || '';
+
+                    if (mcName) {
+                        let key = mcName + '|' + cycle + '|' + tglRph + '|' + rClp;
+
+                        if (!groupedObj[key]) {
+                            groupedObj[key] = {
+                                ...row, 
+                                _kikcList: [kikcRaw],
+                                _benangList: [row['NO BENANG'] ? row['NO BENANG'].toString().trim() : ''],
+                                _warnaList: [row['WARNA'] ? row['WARNA'].toString().trim() : ''],
+                                _ketList: [globalKikc[kikcRaw] || '-'],
+                                _totalQty: qty
+                            };
+                        } else {
+                            groupedObj[key]._kikcList.push(kikcRaw);
+                            groupedObj[key]._benangList.push(row['NO BENANG'] ? row['NO BENANG'].toString().trim() : '');
+                            groupedObj[key]._warnaList.push(row['WARNA'] ? row['WARNA'].toString().trim() : '');
+                            groupedObj[key]._ketList.push(globalKikc[kikcRaw] || '-');
+                            groupedObj[key]._totalQty += qty;
+                        }
+                    }
+                });
+
+                Object.values(groupedObj).forEach(g => {
+                    let mcName = (g['NO MC'] || '').toString().trim().toUpperCase();
+                    
+                    g.displayKikc = [...new Set(g._kikcList.filter(Boolean))].join(', ');
+                    g.displayBenang = [...new Set(g._benangList.filter(Boolean))].join(', ');
+                    g.displayWarna = [...new Set(g._warnaList.filter(Boolean))].join(', ');
+                    
+                    let uniqueKets = [...new Set(g._ketList.filter(k => k && k !== '-'))];
+                    g.displayKet = uniqueKets.length > 0 ? uniqueKets.join(', ') : '-';
+                    
+                    g.displayQty = g._totalQty;
+                    
+                    if (!dyeingGroups[mcName]) {
+                        dyeingGroups[mcName] = [];
+                        mcOrder.push(mcName);
+                    }
+                    dyeingGroups[mcName].push(g);
+                });
+            }
+
+            document.getElementById('valKbnKikcOrder').innerText = formatNumber(kikcOrder);
+            document.getElementById('valKbnKikcReal').innerText = formatNumber(kikcReal);
+            document.getElementById('valKbnKikcPend').innerText = formatNumber(kikcPend);
+            document.getElementById('valKbnQtyOrder').innerText = formatNumber(qtyOrder);
+            document.getElementById('valKbnQtyReal').innerText = formatNumber(qtyReal);
+            document.getElementById('valKbnQtyPend').innerText = formatNumber(qtyPend);
+
+            let htmlDyeing = '';
+            mcOrder.forEach(mc => {
+                let mOrders = dyeingGroups[mc];
+                htmlDyeing += `<div class="machine-group"><h3 class="machine-title">🎛️ Mesin: ${mc}</h3><div class="cycle-grid">`;
+
+                if (mOrders && mOrders.length > 0) {
+                    mOrders.forEach(order => {
+                        let oQty = order.displayQty; 
+                        let mCaps = globalMcCaps[mc] || [];
+                        order._isSesuai = mCaps.some(cap => cap > 0 && Math.abs(cap - oQty) <= 0.5);
+                    });
+
+                    mOrders.sort((a, b) => {
+                        if (a._isSesuai !== b._isSesuai) return a._isSesuai ? -1 : 1;
+                        let cA = parseFloat(a['CYCLE']); let cB = parseFloat(b['CYCLE']);
+                        if(isNaN(cA)) cA = 999; if(isNaN(cB)) cB = 999;
+                        return cA - cB;
+                    });
+
+                    mOrders.forEach(order => {
+                        let capClass = order._isSesuai ? 'badge-success' : 'badge-warning'; 
+                        let capText = order._isSesuai ? '✔️ Sesuai Kapasitas' : '⚠️ Tidak Sesuai';
+                        let capBadge = `<span class="cycle-badge ${capClass}" style="border: 1px solid currentColor;">${capText}</span>`;
+
+                        let rClp = order['REAL CLP'] || "";
+                        let rClpFormat = '<span class="text-danger" style="font-style:italic;">Belum</span>';
+                        
+                        let borderVar = 'var(--info-color)'; 
+                        let statBadge = `<span class="pending-badge badge-info">🗓️ HARI INI</span>`;
+
+                        if (rClp === filterDateStr) {
+                            borderVar = 'var(--success-color)';
+                            let pts = rClp.split('-'); rClpFormat = (pts.length===3) ? `${pts[2]}/${pts[1]}/${pts[0]}` : rClp;
+                            statBadge = `<span class="pending-badge badge-success">✔️ TERCELUP</span>`;
+                        } else {
+                            if (rClp !== "") {
+                                let pts = rClp.split('-'); rClpFormat = (pts.length===3) ? `${pts[2]}/${pts[1]}/${pts[0]}` : rClp;
+                            }
+                            borderVar = 'var(--danger-color)';
+                            statBadge = `<span class="pending-badge badge-danger">⚠️ PENDING</span>`;
+                        }
+
+                        let isRollover = (order['TGL RPH'] < filterDateStr);
+                        let tglAwalHtml = '';
+                        if (isRollover) {
+                            let ptsRph = order['TGL RPH'].split('-'); 
+                            let formatRph = (ptsRph.length === 3) ? `${ptsRph[2]}/${ptsRph[1]}/${ptsRph[0]}` : order['TGL RPH'];
+                            tglAwalHtml = `<div class="text-truncate badge-warning" style="font-size:0.75rem; padding:3px 6px; border-radius:4px; margin-bottom:4px; display:inline-block; border: 1px dashed currentColor;"><strong>⚠️ RPH Awal: ${formatRph}</strong></div>`;
+                        }
+
+                        htmlDyeing += `
+                            <div class="dye-card" style="--theme-color: ${borderVar};">
+                                <div class="dye-card-row" style="margin-bottom: 5px;">
+                                    ${capBadge}
+                                    ${statBadge}
+                                </div>
+                                <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:2px;">
+                                    <strong>KIKC</strong> 
+                                    <span style="font-weight:600; font-size:0.68rem; text-align:right; flex:1; margin-left:10px; word-wrap:break-word;">${order.displayKikc || '-'}</span>
+                                </div>
+                                <div class="text-truncate" title="${order.displayBenang || '-'}"><strong>Benang</strong> ${order.displayBenang || '-'}</div>
+                                <div class="text-truncate" title="${order.displayWarna || '-'}"><strong>Warna</strong> ${order.displayWarna || '-'}</div>
+                                <div class="text-truncate" title="${order.displayKet}"><strong>Ket</strong> <span style="opacity:0.8;">${order.displayKet}</span></div>
+                                ${tglAwalHtml}
+                                <div class="text-truncate" style="margin-top:2px;"><strong>Realisasi</strong> ${rClpFormat}</div>
+                                <div style="margin-top: auto; padding-top: 6px; font-size: 0.85rem; border-top: 1px dashed var(--border-color); text-align: right;">
+                                    <strong>QTY:</strong> <span style="color: ${borderVar}; font-weight:bold; font-size: 0.95rem;">${formatNumber(order.displayQty)} Kg</span>
+                                </div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    htmlDyeing += `<div style="padding:5px; color:var(--text-color); opacity:0.4; font-style:italic; font-size:0.75rem;">Mesin kosong</div>`;
+                }
+                htmlDyeing += `</div></div>`;
+            });
+            document.getElementById('dyeingContainer').innerHTML = htmlDyeing;
+        }
+
+        // ================= RESUME BENANG DUAL TIER =================
+        function renderResumeDyeing(resumeData, last7Dates) {
+            const thead = document.querySelector('#tableResumeDyeing thead');
+            const tbody = document.querySelector('#tableResumeDyeing tbody');
+            
+            let thHtml1 = `<tr><th rowspan="2" style="vertical-align: middle; border-bottom: 2px solid var(--border-color);">No Benang</th>`;
+            let thHtml2 = `<tr>`;
+            
+            last7Dates.forEach(d => {
+                let parts = d.split('-');
+                let shortDate = `${parts[2]}/${parts[1]}`;
+                thHtml1 += `<th colspan="2" style="text-align: center; border-bottom: 1px solid var(--border-color);">${shortDate}</th>`;
+                thHtml2 += `<th style="text-align: center; font-size:0.75rem; opacity:0.8;">Plan</th><th class="text-success" style="text-align: center; font-size:0.75rem; opacity:0.8;">Real</th>`;
+            });
+
+            thHtml1 += `<th colspan="2" style="vertical-align: middle; text-align: center; border-bottom: 1px solid var(--border-color);">Total 7 Hari (Kg)</th></tr>`;
+            thHtml2 += `<th class="text-info" style="text-align: center; font-size:0.75rem; opacity:0.8;">Plan</th><th class="text-success" style="text-align: center; font-size:0.75rem; opacity:0.8;">Real</th></tr>`;
+
+            thead.innerHTML = thHtml1 + thHtml2;
+
+            let bngKeys = Object.keys(resumeData);
+            if (bngKeys.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="${(last7Dates.length * 2) + 3}" style="text-align:center;">Tidak ada data order pada rentang tanggal ini.</td></tr>`;
+                return;
+            }
+
+            let rows = bngKeys.map(bng => {
+                let totalPlan = 0, totalReal = 0;
+                let daily = [];
+                last7Dates.forEach(d => {
+                    let p = resumeData[bng][d].plan || 0;
+                    let r = resumeData[bng][d].real || 0;
+                    totalPlan += p;
+                    totalReal += r;
+                    daily.push({plan: p, real: r});
+                });
+                return { bng: bng, totalPlan: totalPlan, totalReal: totalReal, daily: daily };
+            });
+
+            rows.sort((a, b) => b.totalPlan - a.totalPlan);
+
+            let trHtml = '';
+            let colTotals = Array.from({length: last7Dates.length}, () => ({plan: 0, real: 0}));
+            let grandTotalPlan = 0, grandTotalReal = 0;
+
+            rows.forEach(row => {
+                trHtml += `<tr><td><strong>${row.bng}</strong></td>`;
+                row.daily.forEach((val, idx) => {
+                    colTotals[idx].plan += val.plan;
+                    colTotals[idx].real += val.real;
+                    trHtml += `<td class="num">${val.plan > 0 ? formatNumber(val.plan) : '-'}</td>`;
+                    trHtml += `<td class="num text-success">${val.real > 0 ? formatNumber(val.real) : '-'}</td>`;
+                });
+                grandTotalPlan += row.totalPlan;
+                grandTotalReal += row.totalReal;
+                trHtml += `<td class="num text-info" style="font-weight:bold;">${formatNumber(row.totalPlan)}</td>`;
+                trHtml += `<td class="num text-success" style="font-weight:bold;">${formatNumber(row.totalReal)}</td></tr>`;
+            });
+
+            trHtml += `<tr class="row-subtotal"><td><strong>TOTAL KESELURUHAN</strong></td>`;
+            colTotals.forEach(val => {
+                trHtml += `<td class="num text-info">${formatNumber(val.plan)}</td>`;
+                trHtml += `<td class="num text-success">${formatNumber(val.real)}</td>`;
+            });
+            trHtml += `<td class="num text-warning" style="font-weight:bold; font-size:1.1em;">${formatNumber(grandTotalPlan)}</td>`;
+            trHtml += `<td class="num text-success" style="font-weight:bold; font-size:1.1em;">${formatNumber(grandTotalReal)}</td></tr>`;
+
+            tbody.innerHTML = trHtml;
+        }
+
+        // ================= INIT LOAD =================
+        forceUpdateAll(); 
+        startAutoUpdate();
+    </script>
+</body>
+</html>
